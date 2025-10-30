@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AST API Analyzer</title>
+    <style>
+        body { width: 650px; /* 加宽以容纳发包器 */ font-family: sans-serif; padding: 10px; font-size: 13px; }
+        textarea, select, input { width: 98%; margin-bottom: 5px; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box;}
+        select { width: 100%;}
+        input[type="password"] { /* 保持原样 */ }
+        button { padding: 8px 15px; margin-top: 5px; font-size: 12px; cursor: pointer; border-radius: 4px; border: 1px solid transparent; }
+        button.primary { background-color: #0071e3; color: white; border-color: #0071e3;}
+        button.primary:hover { background-color: #0077ed;}
+        button.secondary { background-color: #f8f8f8; color: #333; border: 1px solid #ccc;}
+        button.secondary:hover { background-color: #eee;}
+        button:disabled { opacity: 0.6; cursor: not-allowed;}
+        hr { margin: 15px 0; border: none; border-top: 1px solid #eee;}
+        #status, #settings-status, #sender-all-status { margin-top: 10px; font-style: italic; color: #666; font-size: 11px; height: 1.2em;} /* 统一状态显示 */
+        pre { white-space: pre-wrap; word-wrap: break-word; background: #f4f4f4; border: 1px solid #ddd; padding: 5px; max-height: 250px; overflow-y: auto; margin-top: 10px; font-size: 12px;}
+
+        /* --- 导航和视图 --- */
+        .nav { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 10px;}
+        .nav button { width: auto; padding: 6px 12px; margin: 0 5px 0 0; border: none; background: none; font-size: 13px; border-bottom: 2px solid transparent; border-radius: 0;}
+        .nav button.active { border-bottom: 2px solid blue; font-weight: bold;}
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* --- 设置 --- */
+        .api-key-container { margin-top: 10px; }
+        label { display: block; margin-bottom: 3px; font-size: 13px; font-weight: 500;}
+
+        /* --- AI 记录 --- */
+        #ai-history-container { max-height: 400px; overflow-y: auto; }
+        .history-item { border: 1px solid #eee; border-radius: 4px; padding: 10px; margin-bottom: 10px; background: #fff; font-size: 12px; }
+        .history-item pre { max-height: 150px; overflow-y: auto; margin-top: 5px; background: #f9f9f9; }
+        .history-meta { color: #888; margin-bottom: 5px; font-size: 11px; }
+        .history-actions button { width: auto; padding: 3px 8px; font-size: 10px; margin-left: 5px;}
+
+        /* --- 发包器 --- */
+        .sender-controls { display: flex; gap: 10px; margin-bottom: 10px; align-items: center;}
+        .sender-controls input[type="search"] { flex-grow: 1; }
+        .sender-controls button { width: auto; }
+        #sender-list-container { max-height: 400px; overflow-y: auto; }
+        .sender-item { border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; background: #fcfcfc;}
+        .sender-item .sender-grid { display: grid; grid-template-columns: 80px 1fr; gap: 8px; align-items: center; margin-bottom: 8px;}
+        .sender-item label { font-weight: 500; text-align: right;}
+        .sender-item input, .sender-item textarea { grid-column: 2 / 3; }
+        .sender-item textarea { min-height: 60px; font-family: monospace; font-size: 11px; }
+        .sender-item .sender-response-pre { min-height: 40px; background-color: #f0f0f0; border: 1px solid #e0e0e0; margin-top: 8px; max-height: 150px; overflow-y: auto;}
+        .sender-item-send-btn { width: auto; float: right; }
+        .sender-item hr { clear: both; margin-top: 10px; }
+
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <button id="nav-analyze" class="active">分析</button>
+        <button id="nav-history">AI记录</button>
+        <button id="nav-sender">发包器</button>
+        <button id="nav-settings">设置</button>
+    </div>
+
+    <div id="view-analyze" class="view active">
+        <button id="analyze-btn" class="primary">分析当前页面JS提取接口和参数</button>
+        <div id="status">准备就绪...</div>
+        <pre id="results"></pre>
+    </div>
+
+    <div id="view-history" class="view">
+        <button id="clear-history-btn" class="secondary">清空记录</button>
+        <hr>
+        <div id="ai-history-container">
+        </div>
+    </div>
+
+    <div id="view-sender" class="view">
+        <div class="sender-controls">
+            <button id="clear-sender-list-btn" class="secondary">清空列表</button>
+            <button id="send-all-requests-btn" class="primary">一键请求全部</button>
+            <input type="search" id="sender-search-input" placeholder="通过URL或Method搜索...">
+        </div>
+        <div id="sender-all-status"></div>
+        <hr>
+        <div id="sender-list-container">
+        </div>
+    </div>
+
+    <div id="view-settings" class="view">
+        <label for="ai-model-select">AI 模型选择</label>
+        <select id="ai-model-select">
+            <option value="gemini">Gemini (Google)</option>
+            <option value="chatgpt">ChatGPT (OpenAI)</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="doubao">豆包 (Doubao)</option>
+        </select>
+
+        <div class="api-key-container" id="gemini-key-container">
+            <label for="api-key-gemini">Gemini API 密钥</label>
+            <input type="password" id="api-key-gemini" placeholder="请输入您的 Gemini API Key">
+        </div>
+        <div class="api-key-container" id="chatgpt-key-container" style="display: none;">
+            <label for="api-key-chatgpt">ChatGPT API 密钥</label>
+            <input type="password" id="api-key-chatgpt" placeholder="请输入您的 OpenAI API Key (sk-...)">
+        </div>
+        <div class="api-key-container" id="deepseek-key-container" style="display: none;">
+            <label for="api-key-deepseek">DeepSeek API 密钥</label>
+            <input type="password" id="api-key-deepseek" placeholder="请输入您的 DeepSeek API Key">
+        </div>
+        <div class="api-key-container" id="doubao-key-container" style="display: none;">
+            <label for="api-key-doubao">豆包 API 密钥</label>
+            <input type="password" id="api-key-doubao" placeholder="请输入您的豆包 API Key">
+        </div>
+
+        <button id="save-settings-btn" class="primary">保存设置</button>
+        <div id="settings-status"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
