@@ -17,7 +17,7 @@
     "https://ark.cn-beijing.volces.com/"
   ],
   "declarative_net_request" : {
-    "rule_resources" : [{ 
+    "rule_resources" : [{
       "id": "ruleset_1",
       "enabled": true,
       "path": "rules.json"
