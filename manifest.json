@@ -1,23 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "AST API Analyzer",
-  "version": "1.2", // 版本号可以再升一下
-  "description": "使用 AST 和 AI 分析页面JS中的API",
+  "name": "AST_Parsing",
+  "version": "1.2", 
+  "description": "利用抽象语法树 (AST) 对当前页面加载的 Js 进行深度静态分析",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "declarativeNetRequest" // 确保有这个，用于处理 CORS
+    "declarativeNetRequest"
   ],
   "host_permissions": [
-    "<all_urls>", // 允许抓取脚本和发送任意请求
+    "<all_urls>",
     "https://generativelanguage.googleapis.com/",
     "https://api.openai.com/",
     "https://api.deepseek.com/",
     "https://ark.cn-beijing.volces.com/"
   ],
   "declarative_net_request" : {
-    "rule_resources" : [{ // 简单的 CORS 规则示例
+    "rule_resources" : [{ 
       "id": "ruleset_1",
       "enabled": true,
       "path": "rules.json"
